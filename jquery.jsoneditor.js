@@ -30,19 +30,20 @@
         var onpropertyclick = options.propertyclick || K;
 
         return this.each(function() {
-            JSONEditor($(this), json, onchange, onpropertyclick, options.propertyElement, options.valueElement);
+            JSONEditor($(this), json, onchange, onpropertyclick, options.propertyElement, options.valueElement, options.divChar);
         });
         
     };
-    
-    function JSONEditor(target, json, onchange, onpropertyclick, propertyElement, valueElement) {
+
+    function JSONEditor(target, json, onchange, onpropertyclick, propertyElement, valueElement, divChar) {
         var opt = {
             target: target,
             onchange: onchange,
             onpropertyclick: onpropertyclick,
             original: json,
             propertyElement: propertyElement,
-            valueElement: valueElement
+            valueElement: valueElement,
+            divChar: divChar
         };
         construct(opt, json, opt.target);
         $(opt.target).on('blur focus', '.property, .value', function() {
@@ -57,17 +58,19 @@
     function isString(o) { return Object.prototype.toString.call(o) == '[object String]'; }
     var types = 'object array boolean number string null';
 
+    var divChar = '.';
+
     // Feeds object `o` with `value` at `path`. If value argument is omitted,
     // object at `path` will be deleted from `o`.
     // Example:
     //      feed({}, 'foo.bar.baz', 10);    // returns { foo: { bar: { baz: 10 } } }
     function feed(o, path, value) {
         var del = arguments.length == 2;
-        
-        if (path.indexOf('.') > -1) {
+
+        if (path.indexOf(divChar) > -1) {
             var diver = o,
                 i = 0,
-                parts = path.split('.');
+                parts = path.split(divChar);
             for (var len = parts.length; i < len - 1; i++) {
                 diver = diver[parts[i]];
             }
@@ -85,7 +88,7 @@
     //     def({ foo: { bar: 5 } }, 'foo.bar', 100);   // returns 5
     //     def({ foo: { bar: 5 } }, 'foo.baz', 100);   // returns 100
     function def(o, path, defaultValue) {
-        path = path.split('.');
+        path = path.split(divChar);
         var i = 0;
         while (i < path.length) {
             if ((o = o[path[i++]]) == undefined) return defaultValue;
@@ -160,6 +163,8 @@
         
         root.children('.item').remove();
         
+        divChar = opt.divChar || '.';
+
         for (var key in json) {
             if (!json.hasOwnProperty(key)) continue;
 
@@ -185,7 +190,7 @@
             property.click(propertyClicked(opt));
             
             if (isObject(json[key]) || isArray(json[key])) {
-                construct(opt, json[key], item, (path ? path + '.' : '') + key);
+                construct(opt, json[key], item, (path ? path + divChar : '') + key);
             }
         }
 
@@ -201,7 +206,7 @@
     function updateParents(el, opt) {
         $(el).parentsUntil(opt.target).each(function() {
             var path = $(this).data('path');
-            path = (path ? path + '.' : path) + $(this).children('.property').val();
+            path = (path ? path + divChar : path) + $(this).children('.property').val();
             var val = stringify(def(opt.original, path, null));
             $(this).children('.value').val(val).attr('title', val);
         });
@@ -209,11 +214,11 @@
 
     function propertyClicked(opt) {
         return function() {
-            var path = $(this).parent().data('path');            
+            var path = $(this).parent().data('path');
             var key = $(this).attr('title');
 
-            var safePath = path ? path.split('.').concat([key]).join('\'][\'') : key;
-            
+            var safePath = path ? path.split(divChar).concat([key]).join('\'][\'') : key;
+
             opt.onpropertyclick('[\'' + safePath + '\']');
         };
     }
@@ -227,8 +232,8 @@
 
             $(this).attr('title', newKey);
 
-            feed(opt.original, (path ? path + '.' : '') + oldKey);
-            if (newKey) feed(opt.original, (path ? path + '.' : '') + newKey, val);
+            feed(opt.original, (path ? path + divChar : '') + oldKey);
+            if (newKey) feed(opt.original, (path ? path + divChar : '') + newKey, val);
 
             updateParents(this, opt);
 
@@ -245,9 +250,9 @@
                 item = $(this).parent(),
                 path = item.data('path');
 
-            feed(opt.original, (path ? path + '.' : '') + key, val);
+            feed(opt.original, (path ? path + divChar : '') + key, val);
             if ((isObject(val) || isArray(val)) && !$.isEmptyObject(val)) {
-                construct(opt, val, item, (path ? path + '.' : '') + key);
+                construct(opt, val, item, (path ? path + divChar : '') + key);
                 addExpander(item);
             } else {
                 item.find('.expander, .item').remove();
